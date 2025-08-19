@@ -38,7 +38,7 @@ public class RepeatingBlockState extends PersistentState {
 	}
 
 	public static PersistentStateType<RepeatingBlockState> TYPE = new PersistentStateType<>(
-		"fireblanket:repeating_command_block_placed", RepeatingBlockState::new, CODEC, null
+		"fireblanket_repeating_command_block_placed", RepeatingBlockState::new, CODEC, null
 	);
 
 	public static PersistentStateType<RepeatingBlockState> getType() {

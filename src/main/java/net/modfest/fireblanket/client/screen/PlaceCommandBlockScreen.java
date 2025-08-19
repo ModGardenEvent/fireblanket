@@ -4,6 +4,7 @@ import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.render.RenderLayer;
 import net.minecraft.text.Text;
 
 public class PlaceCommandBlockScreen extends Screen {
@@ -38,7 +39,7 @@ public class PlaceCommandBlockScreen extends Screen {
 		int w = this.width / 2;
 		int h = this.height / 2;
 
-		context.fill(RenderPipelines.GUI, w - 175, h - 80, w + 175, h + 80, 0xFFC6C6C6);
+		context.fill(RenderLayer.getGui(), w - 175, h - 80, w + 175, h + 80, 0, 0xFFC6C6C6);
 		context.fillGradient(w - 173, h - 78, w + 173, h + 56, 0xFF0000AA, 0xFF000066);
 		context.drawText(client.textRenderer, "We trust you have received the usual lecture from the local", w - 170, h - 75, 0xFFFFFFFF, false);
 		context.drawText(client.textRenderer, "Performance Witch. It usually boils down to these three things:", w - 170, h - 75 + 12, 0xFFFFFFFF, false);

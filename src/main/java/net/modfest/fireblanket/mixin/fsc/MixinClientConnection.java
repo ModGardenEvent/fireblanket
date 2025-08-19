@@ -8,6 +8,7 @@ import io.netty.channel.ChannelPipeline;
 import net.minecraft.network.ClientConnection;
 import net.minecraft.network.NetworkPhase;
 import net.minecraft.network.NetworkSide;
+import net.minecraft.network.PacketCallbacks;
 import net.minecraft.network.listener.PacketListener;
 import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.c2s.config.ReadyC2SPacket;
@@ -40,7 +41,7 @@ public abstract class MixinClientConnection implements FSCConnection {
 	private Channel channel;
 
 	@Shadow
-	private void sendImmediately(Packet<?> packet, ChannelFutureListener callbacks, boolean flush) {
+	private void sendImmediately(Packet<?> packet, PacketCallbacks callbacks, boolean flush) {
 		throw new AbstractMethodError();
 	}
 
@@ -62,9 +63,9 @@ public abstract class MixinClientConnection implements FSCConnection {
 	 * designed to expect this behavior.
 	 */
 	@Redirect(
-		method="Lnet/minecraft/network/ClientConnection;send(Lnet/minecraft/network/packet/Packet;Lio/netty/channel/ChannelFutureListener;Z)V",
-		at=@At(value="INVOKE", target="Lnet/minecraft/network/ClientConnection;sendImmediately(Lnet/minecraft/network/packet/Packet;Lio/netty/channel/ChannelFutureListener;Z)V"))
-	public void fireblanket$asyncPacketSending(ClientConnection subject, Packet<?> pkt, @Nullable ChannelFutureListener listener, boolean flush) {
+		method="send(Lnet/minecraft/network/packet/Packet;Lnet/minecraft/network/PacketCallbacks;Z)V",
+		at=@At(value="INVOKE", target="Lnet/minecraft/network/ClientConnection;sendImmediately(Lnet/minecraft/network/packet/Packet;Lnet/minecraft/network/PacketCallbacks;Z)V"))
+	public void fireblanket$asyncPacketSending(ClientConnection subject, Packet<?> pkt, @Nullable PacketCallbacks callbacks, boolean flush) {
 //		System.out.println("Sending: " + pkt.getClass().getName() + " " + fireblanket$fsc + " " + fireblanket$fscStarted);
 //		System.out.println("Sending: " + pkt.getClass().getName()
 //			+ (pkt instanceof CustomPayloadC2SPacket(CustomPayload payload) ? " as " + payload.getId() : ""));
@@ -76,9 +77,9 @@ public abstract class MixinClientConnection implements FSCConnection {
 
 		PacketListener pktListener = this.packetListener;
 		if (pktListener != null && pktListener.getPhase() == NetworkPhase.PLAY && Fireblanket.IS_FIREBLANKET_SERVER) {
-			fireblanket$queue.put(new QueuedPacket(subject, pkt, listener));
+			fireblanket$queue.put(new QueuedPacket(subject, pkt, callbacks));
 		} else {
-			sendImmediately(pkt, listener, flush);
+			sendImmediately(pkt, callbacks, flush);
 		}
 
 		// Client

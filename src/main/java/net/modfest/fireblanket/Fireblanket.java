@@ -3,7 +3,6 @@ package net.modfest.fireblanket;
 import com.github.luben.zstd.util.Native;
 import com.google.common.base.Stopwatch;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import io.netty.channel.ChannelFutureListener;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
@@ -18,10 +17,10 @@ import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerLoginConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerLoginNetworking;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.block.Block;
 import net.minecraft.network.ClientConnection;
+import net.minecraft.network.PacketCallbacks;
 import net.minecraft.network.packet.Packet;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
@@ -37,7 +36,6 @@ import net.minecraft.world.GameRules;
 import net.modfest.fireblanket.command.CmdFindReplaceCommand;
 import net.modfest.fireblanket.command.DumpCommand;
 import net.modfest.fireblanket.command.ItemBanCommand;
-import net.modfest.fireblanket.command.RegionCommand;
 import net.modfest.fireblanket.command.StareCommand;
 import net.modfest.fireblanket.compat.PolyMcCompat;
 import net.modfest.fireblanket.compat.roles.PlayerRolesCompat;
@@ -54,13 +52,10 @@ import net.modfest.fireblanket.util.LinkedBlocQueue;
 import net.modfest.fireblanket.world.ItemBan;
 import net.modfest.fireblanket.world.blocks.UpdateSignBlockEntityTypes;
 import net.modfest.fireblanket.world.render_regions.RegionSyncRequest;
-import net.modfest.fireblanket.world.render_regions.RenderRegions;
-import net.modfest.fireblanket.world.render_regions.RenderRegionsState;
 import net.modfest.fireblanket.config.EntityFilters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
@@ -80,7 +75,7 @@ public class Fireblanket implements ModInitializer {
 
 	public static final Logger LOGGER = LoggerFactory.getLogger("Fireblanket");
 
-	public record QueuedPacket(ClientConnection conn, Packet<?> packet, ChannelFutureListener listener) {
+	public record QueuedPacket(ClientConnection conn, Packet<?> packet, PacketCallbacks callbacks) {
 	}
 
 	private static final AtomicInteger nextQueue = new AtomicInteger();
@@ -143,7 +138,7 @@ public class Fireblanket implements ModInitializer {
 						do {
 							try {
 								QueuedPacket p = node.data;
-								((ClientConnectionAccessor) p.conn()).fireblanket$sendImmediately(p.packet(), p.listener, true);
+								((ClientConnectionAccessor) p.conn()).fireblanket$sendImmediately(p.packet(), p.callbacks(), true);
 								node = node.next;
 							} catch (Throwable t) {
 								LOGGER.error("Exception in packet thread", t);
@@ -226,11 +221,11 @@ public class Fireblanket implements ModInitializer {
 		});
 
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
-			fullRegionSync(handler.player.getWorld(), sender::sendPacket);
+			fullRegionSync(handler.player.getServerWorld(), sender::sendPacket);
 		});
 
 		ServerEntityWorldChangeEvents.AFTER_PLAYER_CHANGE_WORLD.register((player, origin, destination) -> {
-			fullRegionSync(player.getWorld(), player.networkHandler::sendPacket);
+			fullRegionSync(player.getServerWorld(), player.networkHandler::sendPacket);
 		});
 	}
 
